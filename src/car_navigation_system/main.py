@@ -133,8 +133,8 @@ class SimpleDrivingSystem:
 
             # 设置同步模式
             settings = self.world.get_settings()
-            settings.synchronous_mode = True
-            settings.fixed_delta_seconds = 0.05
+            settings.synchronous_mode = False  # 先使用异步模式确保连接
+            settings.fixed_delta_seconds = None
             self.world.apply_settings(settings)
 
             print("连接成功！")
@@ -559,7 +559,7 @@ class SimpleDrivingSystem:
                 if frame_count % 100 == 0:
                     print(f"运行中... 帧数: {frame_count}, 速度: {speed:.1f} km/h")
 
-                self.world.tick()
+                time.sleep(0.05)
 
         except KeyboardInterrupt:
             print("\n用户中断")
