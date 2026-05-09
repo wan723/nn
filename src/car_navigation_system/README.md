@@ -20,10 +20,8 @@
   pip install -r requirements.txt
   pip install carla numpy opencv-python matplotlib
   pip install setuptools==40.2.0
-  pip insatll wheel
-  pip insatll torch
-  pip install random
-  PIP install cv2
+  pip install wheel
+  pip install torch
   ```
 ## 快速启动
 
