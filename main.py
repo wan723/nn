@@ -11,6 +11,49 @@ import math
 from collections import deque
 import random
 
+class Config:
+    """配置参数类"""
+    # 车辆参数
+    TARGET_SPEED = 30.0  # km/h
+    WAYPOINT_DISTANCE = 5.0  # 路点距离
+    
+    # 控制参数
+    THROTTLE_MAX = 0.6
+    THROTTLE_NORMAL = 0.3
+    BRAKE_STRONG = 0.3
+    STEER_MAX = 0.5
+    
+    # 相机参数
+    CAMERA_IMAGE_SIZE_X = 640
+    CAMERA_IMAGE_SIZE_Y = 480
+    CAMERA_FOV = 90
+    CAMERA_LOCATION_X = -8.0
+    CAMERA_LOCATION_Z = 6.0
+    CAMERA_PITCH = -20.0
+    
+    # 世界参数
+    WEATHER_CLOUDINESS = 30.0
+    WEATHER_PRECIPITATION = 0.0
+    WEATHER_SUN_ALTITUDE = 70.0
+    
+    # NPC参数
+    NPC_VEHICLE_COUNT = 2
+    
+    # CARLA参数
+    CARLA_HOST = 'localhost'
+    CARLA_PORT = 2000
+    TIMEOUT = 10.0
+    FIXED_DELTA_SECONDS = 0.05
+
+        # CARLA参数
+    CARLA_HOST = 'localhost'
+    CARLA_PORT = 2000
+    TIMEOUT = 10.0
+    FIXED_DELTA_SECONDS = 0.05
+    
+    # 同步模式配置
+    FIXED_DELTA_SECONDS = None
+    SYNC_MODE = False
 
 class SimpleController:
     """简单但可靠的控制逻辑"""
@@ -20,8 +63,8 @@ class SimpleController:
         self.vehicle = vehicle
         self.map = world.get_map()
         # self.target_speed = 30.0  # km/h，原速度限制
-        self.target_speed = 50.0  # km/h，增加最高速度限制
-        self.waypoint_distance = 5.0
+        self.target_speed = Config.TARGET_SPEED  # km/h，增加最高速度限制
+        self.waypoint_distance = Config.WAYPOINT_DISTANCE
         self.last_waypoint = None
         # self.reverse_mode = False  # 倒车模式标志（未使用）
         self.manual_reverse = False  # 手动倒车标志
@@ -79,11 +122,11 @@ class SimpleController:
 
         # 速度控制
         if speed < self.target_speed * 0.8:
-            throttle, brake = 0.6, 0.0
+            throttle, brake = Config.THROTTLE_MAX, 0.0
         elif speed > self.target_speed * 1.2:
-            throttle, brake = 0.0, 0.3
+            throttle, brake = 0.0, Config.BRAKE_STRONG
         else:
-            throttle, brake = 0.3, 0.0
+            throttle, brake = Config.THROTTLE_NORMAL, 0.0
 
         # return throttle, brake, steer  # 原返回值（3个值）
         return throttle, brake, steer, False  # 新返回值（4个值，增加reverse标志）
@@ -401,7 +444,7 @@ class SimpleDrivingSystem:
 
         try:
             # 尝试多种连接方式
-            self.client = carla.Client('localhost', 2000)
+            self.client = carla.Client(Config.CARLA_HOST, Config.CARLA_PORT)
             self.client.set_timeout(10.0)
 
             # 检查可用地图
@@ -414,8 +457,8 @@ class SimpleDrivingSystem:
 
             # 设置同步模式
             settings = self.world.get_settings()
-            settings.synchronous_mode = False  # 先使用异步模式确保连接
-            settings.fixed_delta_seconds = None
+            settings.synchronous_mode = Config.SYNC_MODE  # 先使用异步模式确保连接
+            settings.fixed_delta_seconds = Config.FIXED_DELTA_SECONDS
             self.world.apply_settings(settings)
 
             self.logger.info("连接成功！")
@@ -519,7 +562,7 @@ class SimpleDrivingSystem:
             # 第三人称相机
             third_person_transform = carla.Transform(
                 carla.Location(x=-8.0, z=6.0),  # 在车辆后方上方
-                carla.Rotation(pitch=-20.0)  # 向下看
+                carla.Rotation(pitch=Config.CAMERA_PITCH)  # 向下看
             )
             third_person_camera = self.world.spawn_actor(
                 camera_bp, third_person_transform, attach_to=self.vehicle
@@ -593,7 +636,7 @@ class SimpleDrivingSystem:
             self.logger.info(f"正在加载地图: {new_map}...")
             
             # 完全重新连接CARLA客户端
-            self.client = carla.Client('localhost', 2000)
+            self.client = carla.Client(Config.CARLA_HOST, Config.CARLA_PORT)
             self.client.set_timeout(10.0)
             
             # 加载新地图
@@ -615,7 +658,7 @@ class SimpleDrivingSystem:
             self.setup_controller()
             
             # 重新生成NPC车辆
-            self.spawn_npc_vehicles(2)
+            self.spawn_npc_vehicles(Config.NPC_VEHICLE_COUNT)
             
             # 应用当前天气
             self.set_weather(self.current_weather)
@@ -629,7 +672,7 @@ class SimpleDrivingSystem:
                 self.logger.info("正在恢复到Town01...")
                 self.current_map = 'Town01'
                 time.sleep(1.0)
-                self.client = carla.Client('localhost', 2000)
+                self.client = carla.Client(Config.CARLA_HOST, Config.CARLA_PORT)
                 self.client.set_timeout(10.0)
                 self.world = self.client.load_world(self.current_map)
                 time.sleep(3.0)
