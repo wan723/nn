@@ -2,6 +2,7 @@
 # 简化修复版：确保车辆正确生成
 # --------------------------
 
+import logging 
 import carla
 import time
 import numpy as np
@@ -91,9 +92,9 @@ class SimpleController:
         """切换倒车模式"""
         self.manual_reverse = not self.manual_reverse
         if self.manual_reverse:
-            print("进入倒车模式")
+            self.logger.info("进入倒车模式")
         else:
-            print("退出倒车模式，恢复前进")
+            self.logger.info("退出倒车模式，恢复前进")
 
 
 class SimpleDrivingSystem:
@@ -104,6 +105,15 @@ class SimpleDrivingSystem:
         self.cameras = {}  # 存储多个相机
         self.controller = None
         self.camera_image = None
+                # 日志系统
+        self.logger = logging.getLogger('CARLA_Driving')
+        self.logger.setLevel(logging.INFO)
+        if not self.logger.handlers:
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            ch.setFormatter(formatter)
+            self.logger.addHandler(ch)
         self.current_view = 'third_person'  # 当前视角模式：'first_person', 'third_person', 'birdseye'
         self.current_map = 'Town01'  # 当前地图
         self.available_maps = ['Town01', 'Town02', 'Town03', 'Town04', 'Town05', 'Town06', 'Town07']  # 可用地图列表
@@ -270,7 +280,7 @@ class SimpleDrivingSystem:
             return display_img
             
         except Exception as e:
-            print(f"绘制HUD时出错: {e}")
+            self.logger.info(f"绘制HUD时出错: {e}")
             return display_img
 
     def draw_ar_navigation(self, display_img):
@@ -382,12 +392,12 @@ class SimpleDrivingSystem:
             return display_img
 
         except Exception as e:
-            print(f"绘制AR导航时出错: {e}")
+            self.logger.info(f"绘制AR导航时出错: {e}")
             return display_img
 
     def connect(self):
         """连接到CARLA服务器"""
-        print("正在连接到CARLA服务器...")
+        self.logger.info("正在连接到CARLA服务器...")
 
         try:
             # 尝试多种连接方式
@@ -396,11 +406,11 @@ class SimpleDrivingSystem:
 
             # 检查可用地图
             available_maps = self.client.get_available_maps()
-            print(f"可用地图: {available_maps}")
+            self.logger.info(f"可用地图: {available_maps}")
 
             # 加载地图
             self.world = self.client.load_world('Town01')
-            print("地图加载成功")
+            self.logger.info("地图加载成功")
 
             # 设置同步模式
             settings = self.world.get_settings()
@@ -408,20 +418,20 @@ class SimpleDrivingSystem:
             settings.fixed_delta_seconds = None
             self.world.apply_settings(settings)
 
-            print("连接成功！")
+            self.logger.info("连接成功！")
             return True
 
         except Exception as e:
-            print(f"连接失败: {e}")
-            print("请确保:")
-            print("1. CARLA服务器正在运行")
-            print("2. 服务器端口为2000")
-            print("3. 地图Town01可用")
+            self.logger.info(f"连接失败: {e}")
+            self.logger.info("请确保:")
+            self.logger.info("1. CARLA服务器正在运行")
+            self.logger.info("2. 服务器端口为2000")
+            self.logger.info("3. 地图Town01可用")
             return False
 
     def spawn_vehicle(self):
         """生成车辆 - 使用当前选中的车辆品牌"""
-        print("正在生成车辆...")
+        self.logger.info("正在生成车辆...")
 
         try:
             # 获取蓝图库
@@ -432,7 +442,7 @@ class SimpleDrivingSystem:
             vehicle_bp = blueprint_library.find(vehicle_bp_name)
             
             if not vehicle_bp:
-                print(f"未找到 {vehicle_display_name} 蓝图，尝试其他车辆...")
+                self.logger.info(f"未找到 {vehicle_display_name} 蓝图，尝试其他车辆...")
                 vehicle_bp = blueprint_library.filter('vehicle.*')[0]
                 vehicle_display_name = "Default Vehicle"
 
@@ -442,10 +452,10 @@ class SimpleDrivingSystem:
 
             # 获取出生点
             spawn_points = self.world.get_map().get_spawn_points()
-            print(f"找到 {len(spawn_points)} 个出生点")
+            self.logger.info(f"找到 {len(spawn_points)} 个出生点")
 
             if not spawn_points:
-                print("没有可用的出生点！")
+                self.logger.info("没有可用的出生点！")
                 return False
 
             # 选择第一个出生点
@@ -456,7 +466,7 @@ class SimpleDrivingSystem:
             self.vehicle = self.world.try_spawn_actor(vehicle_bp, spawn_point)
 
             if not self.vehicle:
-                print("无法生成车辆，尝试清理现有车辆...")
+                self.logger.info("无法生成车辆，尝试清理现有车辆...")
                 # 清理现有车辆
                 for actor in self.world.get_actors().filter('vehicle.*'):
                     actor.destroy()
@@ -466,25 +476,25 @@ class SimpleDrivingSystem:
                 self.vehicle = self.world.try_spawn_actor(vehicle_bp, spawn_point)
 
             if self.vehicle:
-                print(f"车辆生成成功！ID: {self.vehicle.id}")
-                print(f"车辆型号: {vehicle_display_name}")
-                print(f"位置: {spawn_point.location}")
+                self.logger.info(f"车辆生成成功！ID: {self.vehicle.id}")
+                self.logger.info(f"车辆型号: {vehicle_display_name}")
+                self.logger.info(f"位置: {spawn_point.location}")
 
                 # 禁用自动驾驶
                 self.vehicle.set_autopilot(False)
 
                 return True
             else:
-                print("车辆生成失败")
+                self.logger.info("车辆生成失败")
                 return False
 
         except Exception as e:
-            print(f"生成车辆时出错: {e}")
+            self.logger.info(f"生成车辆时出错: {e}")
             return False
 
     def setup_camera(self):
         """设置多个相机"""
-        print("正在设置相机...")
+        self.logger.info("正在设置相机...")
 
         try:
             blueprint_library = self.world.get_blueprint_library()
@@ -528,11 +538,11 @@ class SimpleDrivingSystem:
             birdseye_camera.listen(lambda image: self.camera_callback(image, 'birdseye'))
             self.cameras['birdseye'] = birdseye_camera
 
-            print("相机设置成功 - 已创建三个视角相机")
+            self.logger.info("相机设置成功 - 已创建三个视角相机")
             return True
 
         except Exception as e:
-            print(f"设置相机时出错: {e}")
+            self.logger.info(f"设置相机时出错: {e}")
             return False
 
     def camera_callback(self, image, view_mode=None):
@@ -549,7 +559,7 @@ class SimpleDrivingSystem:
 
     def update_camera_view(self):
         """更新相机视角"""
-        print(f"已切换到{self.get_view_name()}视角")
+        self.logger.info(f"已切换到{self.get_view_name()}视角")
 
     def switch_map(self):
         """切换到下一个地图"""
@@ -580,7 +590,7 @@ class SimpleDrivingSystem:
             next_index = (current_index + 1) % len(self.available_maps)
             new_map = self.available_maps[next_index]
 
-            print(f"正在加载地图: {new_map}...")
+            self.logger.info(f"正在加载地图: {new_map}...")
             
             # 完全重新连接CARLA客户端
             self.client = carla.Client('localhost', 2000)
@@ -610,13 +620,13 @@ class SimpleDrivingSystem:
             # 应用当前天气
             self.set_weather(self.current_weather)
             
-            print(f"地图切换成功: {self.current_map}")
+            self.logger.info(f"地图切换成功: {self.current_map}")
             
         except Exception as e:
-            print(f"切换地图时出错: {e}")
+            self.logger.info(f"切换地图时出错: {e}")
             # 尝试重新加载Town01作为备份
             try:
-                print("正在恢复到Town01...")
+                self.logger.info("正在恢复到Town01...")
                 self.current_map = 'Town01'
                 time.sleep(1.0)
                 self.client = carla.Client('localhost', 2000)
@@ -627,9 +637,9 @@ class SimpleDrivingSystem:
                 self.setup_camera()
                 self.setup_controller()
                 self.set_weather(self.current_weather)
-                print("已恢复到Town01")
+                self.logger.info("已恢复到Town01")
             except Exception as e2:
-                print(f"恢复失败: {e2}")
+                self.logger.info(f"恢复失败: {e2}")
 
     def set_weather(self, weather_type):
         """设置天气"""
@@ -638,13 +648,13 @@ class SimpleDrivingSystem:
                 weather = self.weather_presets[weather_type]
                 self.world.set_weather(weather)
                 self.current_weather = weather_type
-                print(f"天气设置成功: {weather_type}")
+                self.logger.info(f"天气设置成功: {weather_type}")
                 return True
             else:
-                print(f"无效的天气类型: {weather_type}")
+                self.logger.info(f"无效的天气类型: {weather_type}")
                 return False
         except Exception as e:
-            print(f"设置天气时出错: {e}")
+            self.logger.info(f"设置天气时出错: {e}")
             return False
 
     def switch_weather(self):
@@ -656,7 +666,7 @@ class SimpleDrivingSystem:
             next_weather = weather_types[next_index]
             self.set_weather(next_weather)
         except Exception as e:
-            print(f"切换天气时出错: {e}")
+            self.logger.info(f"切换天气时出错: {e}")
 
     def switch_color(self):
         """切换车辆颜色"""
@@ -707,7 +717,7 @@ class SimpleDrivingSystem:
                     for spawn_point in spawn_points[:5]:  # 尝试前5个出生点
                         self.vehicle = self.world.try_spawn_actor(vehicle_bp, spawn_point)
                         if self.vehicle:
-                            print("车辆已移动到新位置")
+                            self.logger.info("车辆已移动到新位置")
                             break
                 
                 if self.vehicle:
@@ -720,17 +730,17 @@ class SimpleDrivingSystem:
                     # 重新设置控制器
                     self.setup_controller()
                     
-                    print(f"车辆颜色已切换: {color_name}")
+                    self.logger.info(f"车辆颜色已切换: {color_name}")
                 else:
-                    print("无法生成新车辆，颜色切换失败")
+                    self.logger.info("无法生成新车辆，颜色切换失败")
                     # 重置颜色索引
                     self.current_color_index = (self.current_color_index - 1) % len(self.car_colors)
                     # 尝试恢复车辆
                     self.spawn_vehicle()
             else:
-                print("车辆不存在，无法切换颜色")
+                self.logger.info("车辆不存在，无法切换颜色")
         except Exception as e:
-            print(f"切换车辆颜色时出错: {e}")
+            self.logger.info(f"切换车辆颜色时出错: {e}")
             # 重置颜色索引
             self.current_color_index = (self.current_color_index - 1) % len(self.car_colors)
             # 尝试恢复车辆
@@ -741,15 +751,15 @@ class SimpleDrivingSystem:
         """切换车辆品牌 - 显示菜单供选择"""
         try:
             # 显示车辆品牌菜单
-            print("\n" + "=" * 40)
-            print("选择车辆品牌:")
-            print("=" * 40)
+            self.logger.info("\n" + "=" * 40)
+            self.logger.info("选择车辆品牌:")
+            self.logger.info("=" * 40)
             for i, (bp_name, display_name) in enumerate(self.vehicle_models):
                 marker = " >>> " if i == self.current_vehicle_index else "     "
-                print(f"{marker}[{i + 1}] {display_name}")
-            print("=" * 40)
-            print("按 1-9 选择车辆，q 取消")
-            print("=" * 40)
+                self.logger.info(f"{marker}[{i + 1}] {display_name}")
+            self.logger.info("=" * 40)
+            self.logger.info("按 1-9 选择车辆，q 取消")
+            self.logger.info("=" * 40)
             
             # 获取用户输入（在实际运行中，这需要通过输入函数实现）
             # 这里我们直接切换到下一个车辆
@@ -798,7 +808,7 @@ class SimpleDrivingSystem:
                     for spawn_point in spawn_points[:5]:
                         self.vehicle = self.world.try_spawn_actor(vehicle_bp, spawn_point)
                         if self.vehicle:
-                            print("车辆已移动到新位置")
+                            self.logger.info("车辆已移动到新位置")
                             break
                 
                 if self.vehicle:
@@ -811,16 +821,16 @@ class SimpleDrivingSystem:
                     # 重新设置控制器
                     self.setup_controller()
                     
-                    print(f"\n车辆品牌已切换: {new_vehicle_name}")
+                    self.logger.info(f"\n车辆品牌已切换: {new_vehicle_name}")
                 else:
-                    print("无法生成新车辆，品牌切换失败")
+                    self.logger.info("无法生成新车辆，品牌切换失败")
                     # 尝试恢复车辆
                     self.spawn_vehicle()
             else:
-                print("车辆不存在，无法切换品牌")
+                self.logger.info("车辆不存在，无法切换品牌")
                 
         except Exception as e:
-            print(f"切换车辆品牌时出错: {e}")
+            self.logger.info(f"切换车辆品牌时出错: {e}")
             # 尝试恢复车辆
             if not self.vehicle:
                 self.spawn_vehicle()
@@ -843,7 +853,7 @@ class SimpleDrivingSystem:
                 all_y.append(waypoint.transform.location.y)
 
             if not all_x or not all_y:
-                print("无法获取道路拓扑信息")
+                self.logger.info("无法获取道路拓扑信息")
                 return
 
             min_x, max_x = min(all_x), max(all_x)
@@ -864,9 +874,9 @@ class SimpleDrivingSystem:
                 # 绘制道路点（灰色）
                 cv2.circle(self.map_img, (wp_x, wp_y), 1, (80, 80, 80), -1)
 
-            print("道路拓扑地图生成成功")
+            self.logger.info("道路拓扑地图生成成功")
         except Exception as e:
-            print(f"生成拓扑地图时出错: {e}")
+            self.logger.info(f"生成拓扑地图时出错: {e}")
 
     def world_to_map(self, location):
         """将世界坐标转换为地图图像坐标"""
@@ -901,7 +911,7 @@ class SimpleDrivingSystem:
                 if self.vehicle:
                     self.vehicle.set_light_state(carla.VehicleLightState(carla.VehicleLightState.LowBeam))
                 
-                print("已切换到夜晚模式，近光灯已打开")
+                self.logger.info("已切换到夜晚模式，近光灯已打开")
             else:
                 # 切换回白天模式（使用当前天气）
                 self.set_weather(self.current_weather)
@@ -910,10 +920,10 @@ class SimpleDrivingSystem:
                 if self.vehicle:
                     self.vehicle.set_light_state(carla.VehicleLightState(carla.VehicleLightState.NONE))
                 
-                print("已切换到白天模式，近光灯已关闭")
+                self.logger.info("已切换到白天模式，近光灯已关闭")
                 
         except Exception as e:
-            print(f"切换夜晚模式时出错: {e}")
+            self.logger.info(f"切换夜晚模式时出错: {e}")
 
     def take_screenshot(self, image):
         """保存当前画面截图"""
@@ -944,10 +954,10 @@ class SimpleDrivingSystem:
             # 保存截图
             cv2.imwrite(filepath, image)
             
-            print(f"截图已保存: {filepath}")
+            self.logger.info(f"截图已保存: {filepath}")
             
         except Exception as e:
-            print(f"保存截图时出错: {e}")
+            self.logger.info(f"保存截图时出错: {e}")
 
     def get_view_name(self):
         """获取视角名称"""
@@ -961,13 +971,13 @@ class SimpleDrivingSystem:
     def setup_controller(self):
         """设置控制器"""
         self.controller = SimpleController(self.world, self.vehicle)
-        print("控制器设置完成")
+        self.logger.info("控制器设置完成")
 
     def run(self):
         """主运行循环"""
-        print("\n" + "=" * 50)
-        print("简化自动驾驶系统")
-        print("=" * 50)
+        self.logger.info("\n" + "=" * 50)
+        self.logger.info("简化自动驾驶系统")
+        self.logger.info("=" * 50)
 
         # 连接服务器
         if not self.connect():
@@ -980,13 +990,13 @@ class SimpleDrivingSystem:
         # 设置相机
         if not self.setup_camera():
             # 即使相机失败也继续运行
-            print("警告：相机设置失败，继续运行...")
+            self.logger.info("警告：相机设置失败，继续运行...")
 
         # 设置控制器
         self.setup_controller()
 
         # 等待一会儿让系统稳定
-        print("系统初始化中...")
+        self.logger.info("系统初始化中...")
         time.sleep(2.0)
 
         # 设置天气
@@ -1000,23 +1010,23 @@ class SimpleDrivingSystem:
         # 生成一些NPC车辆
         self.spawn_npc_vehicles(2)
 
-        print("\n系统准备就绪！")
-        print("控制指令:")
-        print("  q - 退出程序")
-        print("  r - 重置车辆")
-        print("  s - 紧急停止")
-        print("  x - 切换倒车/前进模式（速度为0时生效）")
-        print("  v - 切换视角（第一人称/第三人称/鸟瞰图）")
-        print("  m - 切换地图（Town01/Town02/Town03等）")
-        print("  w - 切换天气（晴天/雨天/多云/湿滑）")
-        print("  c - 切换车辆颜色")
-        print("  u - 切换车辆款式（Tesla/Chevrolet/Ford等）")
-        print("  l - 切换夜晚模式（自动打开/关闭近光灯）")
-        print("  d - 切换导航轨迹显示")
-        print("  y - 切换HUD仪表盘显示")
-        print("  i - 切换AR导航显示（画面叠加导航箭头）")
-        print("  p - 保存当前画面截图")
-        print("\n开始自动驾驶...\n")
+        self.logger.info("\n系统准备就绪！")
+        self.logger.info("控制指令:")
+        self.logger.info("  q - 退出程序")
+        self.logger.info("  r - 重置车辆")
+        self.logger.info("  s - 紧急停止")
+        self.logger.info("  x - 切换倒车/前进模式（速度为0时生效）")
+        self.logger.info("  v - 切换视角（第一人称/第三人称/鸟瞰图）")
+        self.logger.info("  m - 切换地图（Town01/Town02/Town03等）")
+        self.logger.info("  w - 切换天气（晴天/雨天/多云/湿滑）")
+        self.logger.info("  c - 切换车辆颜色")
+        self.logger.info("  u - 切换车辆款式（Tesla/Chevrolet/Ford等）")
+        self.logger.info("  l - 切换夜晚模式（自动打开/关闭近光灯）")
+        self.logger.info("  d - 切换导航轨迹显示")
+        self.logger.info("  y - 切换HUD仪表盘显示")
+        self.logger.info("  i - 切换AR导航显示（画面叠加导航箭头）")
+        self.logger.info("  p - 保存当前画面截图")
+        self.logger.info("\n开始自动驾驶...\n")
 
         # 创建显示窗口
         cv2.namedWindow('Autonomous Driving - Simple Version', cv2.WINDOW_NORMAL)
@@ -1139,7 +1149,7 @@ class SimpleDrivingSystem:
                 # 处理按键
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
-                    print("正在退出...")
+                    self.logger.info("正在退出...")
                     running = False
                 elif key == ord('r'):
                     self.reset_vehicle()
@@ -1148,13 +1158,13 @@ class SimpleDrivingSystem:
                     self.vehicle.apply_control(carla.VehicleControl(
                         throttle=0.0, brake=1.0, hand_brake=True
                     ))
-                    print("紧急停止")
+                    self.logger.info("紧急停止")
                 elif key == ord('x'):
                     # 切换倒车模式（只在速度接近0时允许切换）
                     if speed < 1.0:  # 速度小于1km/h时允许切换
                         self.controller.toggle_reverse()
                     else:
-                        print("请先减速到接近停止（速度<1km/h）再切换倒车模式")
+                        self.logger.info("请先减速到接近停止（速度<1km/h）再切换倒车模式")
                 elif key == ord('v'):
                     # 切换视角模式
                     view_modes = ['third_person', 'first_person', 'birdseye']
@@ -1179,7 +1189,7 @@ class SimpleDrivingSystem:
                     if self.camera_image is not None:
                         self.take_screenshot(self.camera_image)
                     else:
-                        print("当前没有图像可保存")
+                        self.logger.info("当前没有图像可保存")
                 elif key == ord('l') or key == ord('L'):
                     # 切换夜晚模式（支持大小写）
                     self.toggle_night_mode()
@@ -1190,42 +1200,42 @@ class SimpleDrivingSystem:
                     # 切换轨迹显示（支持大小写）
                     self.show_trajectory = not self.show_trajectory
                     if self.show_trajectory:
-                        print("轨迹显示已开启")
+                        self.logger.info("轨迹显示已开启")
                     else:
-                        print("轨迹显示已关闭")
+                        self.logger.info("轨迹显示已关闭")
                 elif key == ord('y') or key == ord('Y'):
                     # 切换HUD仪表盘显示（支持大小写）
                     self.show_hud = not self.show_hud
                     if self.show_hud:
-                        print("HUD仪表盘已开启")
+                        self.logger.info("HUD仪表盘已开启")
                     else:
-                        print("HUD仪表盘已关闭")
+                        self.logger.info("HUD仪表盘已关闭")
                 elif key == ord('i') or key == ord('I'):
                     # 切换AR导航显示（支持大小写）
                     self.show_ar_navigation = not self.show_ar_navigation
                     if self.show_ar_navigation:
-                        print("AR导航已开启")
+                        self.logger.info("AR导航已开启")
                     else:
-                        print("AR导航已关闭")
+                        self.logger.info("AR导航已关闭")
 
                 frame_count += 1
 
                 # 每100帧显示一次状态
                 if frame_count % 100 == 0:
-                    print(f"运行中... 帧数: {frame_count}, 速度: {speed:.1f} km/h")
+                    self.logger.info(f"运行中... 帧数: {frame_count}, 速度: {speed:.1f} km/h")
 
                 time.sleep(0.05)
 
         except KeyboardInterrupt:
-            print("\n用户中断")
+            self.logger.info("\n用户中断")
         except Exception as e:
-            print(f"运行错误: {e}")
+            self.logger.info(f"运行错误: {e}")
         finally:
             self.cleanup()
 
     def spawn_npc_vehicles(self, count=2):
         """生成NPC车辆（简化）"""
-        print(f"正在生成 {count} 辆NPC车辆...")
+        self.logger.info(f"正在生成 {count} 辆NPC车辆...")
 
         try:
             blueprint_library = self.world.get_blueprint_library()
@@ -1250,31 +1260,31 @@ class SimpleDrivingSystem:
                         if npc:
                             npc.set_autopilot(True)
                             npc_vehicles.append(npc)
-                            print(f"生成NPC车辆 {len(npc_vehicles)}")
+                            self.logger.info(f"生成NPC车辆 {len(npc_vehicles)}")
                 except:
                     pass
 
-            print(f"成功生成 {len(npc_vehicles)} 辆NPC车辆")
+            self.logger.info(f"成功生成 {len(npc_vehicles)} 辆NPC车辆")
 
         except Exception as e:
-            print(f"生成NPC车辆时出错: {e}")
+            self.logger.info(f"生成NPC车辆时出错: {e}")
 
     def reset_vehicle(self):
         """重置车辆位置"""
-        print("重置车辆...")
+        self.logger.info("重置车辆...")
 
         spawn_points = self.world.get_map().get_spawn_points()
         if spawn_points:
             new_spawn_point = random.choice(spawn_points)
             self.vehicle.set_transform(new_spawn_point)
-            print(f"车辆已重置到新位置: {new_spawn_point.location}")
+            self.logger.info(f"车辆已重置到新位置: {new_spawn_point.location}")
 
             # 等待重置完成
             time.sleep(0.5)
 
     def cleanup(self):
         """清理资源"""
-        print("\n正在清理资源...")
+        self.logger.info("\n正在清理资源...")
 
         # 清理所有相机
         for view_mode, camera in self.cameras.items():
@@ -1295,7 +1305,7 @@ class SimpleDrivingSystem:
         time.sleep(1.0)
 
         cv2.destroyAllWindows()
-        print("清理完成")
+        self.logger.info("清理完成")
 
 
 def main():
