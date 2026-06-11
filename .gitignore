@@ -1,3 +1,6 @@
 venv37/ 
 __pycache__/ 
 *.pyc 
+venv37/ 
+__pycache__/ 
+*.pyc 
