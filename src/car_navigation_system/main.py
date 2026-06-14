@@ -19,7 +19,7 @@ class SimpleController:
         self.vehicle = vehicle
         self.map = world.get_map()
         # self.target_speed = 30.0  # km/h，原速度限制
-        self.target_speed = 50.0  # km/h，增加最高速度限制
+        self.target_speed = 30.0 #km/h，增加最高速度限制
         self.waypoint_distance = 5.0
         self.last_waypoint = None
         # self.reverse_mode = False  # 倒车模式标志（未使用）
