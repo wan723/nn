@@ -38,7 +38,7 @@ car_navigation_system/
 
 2. **安装 Python 依赖**
    ```bash
-   pip install carla numpy opencv-python matplotlib torch
+   pip install carla numpy opencv-python
    ```
 
 ## 快速启动
