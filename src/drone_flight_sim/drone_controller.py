@@ -181,14 +181,16 @@ class DroneController:
             current_time = time.time()
             if show_progress and current_time - last_print_time >= 0.5:
                 pos = self.get_position()
-                current_distance = (
-                    (pos.x_val - x) ** 2 +
-                    (pos.y_val - y) ** 2 +
-                    (pos.z_val - z) ** 2
-                ) ** 0.5
+                current_distance = ((pos.x_val - x) ** 2 + (pos.y_val - y) ** 2 + (pos.z_val - z) ** 2) ** 0.5
                 progress = max(0, min(100, (1 - current_distance / total_distance) * 100)) if total_distance > 0 else 100
                 speed = self.get_speed()
-                print(f"   进度: {progress:5.1f}% | 剩余: {current_distance:5.1f}m | 速度: {speed:.1f}m/s    ", end="\r")
+    
+                # 添加进度条
+                bar_length = 20
+                filled = int(bar_length * progress / 100)
+                bar = '█' * filled + '░' * (bar_length - filled)
+    
+                print(f"   [{bar}] {progress:5.1f}% | 剩余: {current_distance:5.1f}m | 速度: {speed:.1f}m/s    ", end="\r")
                 last_print_time = current_time
 
             # 短暂休眠，减少 CPU 占用
