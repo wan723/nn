@@ -56,7 +56,8 @@ def auto_flight_mode(drone):
 
         # 飞向当前航点，速度 3 m/s
         success = drone.fly_to_position(x, y, z, velocity=3)
-
+        print(f"📍 飞行结果: {'✅ 成功' if success else '❌ 失败'}")
+        
         if not success:
             # 发生碰撞，尝试自动恢复
             print("\n⚠️  检测到碰撞，开始自动恢复...")
