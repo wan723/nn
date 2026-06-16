@@ -49,13 +49,20 @@ def auto_flight_mode(drone):
     # ===== 执行飞行任务阶段 =====
     manual_takeover = False
 
+    mission_start_time = time.time()
+
     for i, (x, y, z) in enumerate(waypoints, 1):
+        segment_start = time.time()
+
         print(f"\n{'=' * 40}")
         print(f"第 {i} 段飞行 -> 目标: ({x}, {y}, {z})")
         print(f"{'=' * 40}")
 
         # 飞向当前航点，速度 3 m/s
         success = drone.fly_to_position(x, y, z, velocity=3)
+
+        segment_elapsed = time.time() - segment_start
+        print(f"⏱ 本段耗时: {segment_elapsed:.1f}s")
 
         if not success:
             # 发生碰撞，尝试自动恢复
@@ -94,6 +101,9 @@ def auto_flight_mode(drone):
         time.sleep(1)
 
     # 降落阶段
+    total_elapsed = time.time() - mission_start_time
+    print_separator()
+    print(f"⏱ 总飞行时间: {total_elapsed:.1f}s")
     print_separator()
     if manual_takeover:
         print("⚠️  进入手动接管模式")
